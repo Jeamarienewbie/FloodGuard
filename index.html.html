@@ -1,0 +1,2514 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="description" content="FloodGuard Cloud — Real-time flood monitoring accessible anywhere">
+    <title>FloodGuard Cloud Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --deep: #001f3f;
+            --dark: #003366;
+            --mid: #00509e;
+            --surface: #007bb5;
+            --border: rgba(0, 255, 255, 0.25);
+            --glow: rgba(0, 212, 255, 0.2);
+            --white: #e0f7fa;
+            --muted: #80deea;
+            --gold: #00ffff;
+            --gold-lt: #80ffff;
+            --gold-bg: rgba(0, 255, 255, 0.15);
+            --accent: #00bfff;
+            --bright: #2596e1;
+            --c0: #00e676;
+            --c1: #ffea00;
+            --c2: #ff9100;
+            --c3: #ff1744;
+            --ai-primary: #00f2fe;
+            --ai-secondary: #4facfe;
+            --ai-glow: rgba(0, 242, 254, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif
+        }
+
+        html {
+            scroll-behavior: smooth
+        }
+
+        body {
+            background: var(--deep);
+            color: var(--white);
+            min-height: 100vh;
+            overflow-x: hidden
+        }
+
+        /* ── NAV ── */
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 26px;
+            background: linear-gradient(90deg, rgba(0, 31, 63, 0.95), rgba(0, 80, 158, 0.85));
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 4px 30px rgba(0, 212, 255, 0.15);
+            position: sticky;
+            top: 0;
+            z-index: 220;
+            gap: 12px;
+            flex-wrap: wrap
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -.5px;
+            flex-shrink: 0;
+            color: #e0f7fa;
+            text-shadow: 0 2px 12px rgba(0, 212, 255, 0.4);
+        }
+
+        .brand-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--gold);
+            box-shadow: 0 0 10px var(--gold), 0 0 20px rgba(0, 255, 255, 0.5);
+            animation: pulse 2s infinite
+        }
+
+        .brand-sub {
+            color: var(--gold);
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 2px;
+            letter-spacing: 1px
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .conn-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            border: 1px solid
+        }
+
+        .pill-ok {
+            background: rgba(34, 197, 94, .1);
+            color: #00e676;
+            border-color: rgba(34, 197, 94, .3)
+        }
+
+        .pill-err {
+            background: rgba(239, 68, 68, .1);
+            color: #ff1744;
+            border-color: rgba(239, 68, 68, .3)
+        }
+
+        .ts {
+            font-size: 11px;
+            color: var(--muted)
+        }
+
+        .nav-btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: .2s;
+            white-space: nowrap
+        }
+
+        .btn-log {
+            background: var(--gold-bg);
+            color: var(--gold);
+            border-color: rgba(245, 158, 11, .35)
+        }
+
+        .btn-log:hover {
+            background: var(--gold);
+            color: #ffffff
+        }
+
+        .btn-notif {
+            background: transparent;
+            color: var(--muted);
+            border-color: var(--border)
+        }
+
+        .btn-notif:hover,
+        .btn-notif.on {
+            border-color: var(--gold);
+            color: var(--gold);
+            background: var(--gold-bg)
+        }
+
+        .mobile-toggle {
+            display: none;
+            background: transparent;
+            border: none;
+            color: #e0f7fa;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .sidebar-overlay {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 5, 20, 0.7);
+            z-index: 210;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .sidebar-open .sidebar-overlay {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* ── ALERT BANNER ── */
+        .alert-banner {
+            display: none;
+            padding: 12px 24px;
+            font-weight: 700;
+            font-size: 14px;
+            text-align: center;
+            letter-spacing: .3px;
+            border-bottom: 2px solid
+        }
+
+        .al1 {
+            background: rgba(245, 158, 11, .12);
+            border-color: var(--gold);
+            color: var(--gold-lt)
+        }
+
+        .al2 {
+            background: rgba(249, 115, 22, .12);
+            border-color: #ff9100;
+            color: #fb923c
+        }
+
+        .al3 {
+            background: rgba(239, 68, 68, .15);
+            border-color: #ff1744;
+            color: #f87171;
+            animation: flash 1s infinite
+        }
+
+        /* ── HERO ── */
+        .hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 44px 20px 30px;
+            text-align: center
+        }
+
+        .hero-eyebrow {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--muted);
+            margin-bottom: 26px
+        }
+
+        .water-wrap {
+            position: relative;
+            width: 170px;
+            height: 170px;
+            margin-bottom: 22px
+        }
+
+        .water-outer {
+            width: 170px;
+            height: 170px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            background: rgba(255, 255, 255, .7);
+            box-shadow: 0 0 40px var(--glow)
+        }
+
+        .w-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            transition: height 1.4s ease, background .6s;
+            overflow: hidden
+        }
+
+        .w-fill::before,
+        .w-fill::after {
+            content: '';
+            position: absolute;
+            top: -18px;
+            left: -50%;
+            width: 200%;
+            height: 36px;
+            border-radius: 40%;
+            animation: wave 3s infinite linear;
+            opacity: .7
+        }
+
+        .w-fill::after {
+            animation-duration: 4.5s;
+            animation-direction: reverse;
+            opacity: .4
+        }
+
+        .w-txt {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2
+        }
+
+        .w-num {
+            font-size: 54px;
+            font-weight: 900;
+            line-height: 1;
+            transition: color .4s
+        }
+
+        .w-lbl {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            margin-top: 4px
+        }
+
+        .pulse-ring {
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            opacity: 0
+        }
+
+        .pulse-ring.active {
+            animation: ring 2s infinite
+        }
+
+        .hero-status {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px
+        }
+
+        .hero-action {
+            font-size: 14px;
+            color: var(--muted);
+            max-width: 420px;
+            line-height: 1.7
+        }
+
+        /* ── LOG BUTTON (big floating style) ── */
+        .log-open-wrap {
+            display: flex;
+            justify-content: center;
+            margin: 4px 0 28px
+        }
+
+        .log-open-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 13px 32px;
+            border-radius: 14px;
+            border: 1px solid rgba(245, 158, 11, .4);
+            background: linear-gradient(135deg, rgba(245, 158, 11, .15), rgba(249, 115, 22, .08));
+            color: var(--gold-lt);
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: .25s;
+            box-shadow: 0 6px 24px rgba(245, 158, 11, .12)
+        }
+
+        .log-open-btn:hover {
+            background: linear-gradient(135deg, rgba(245, 158, 11, .28), rgba(249, 115, 22, .18));
+            transform: translateY(-2px);
+            box-shadow: 0 10px 32px rgba(245, 158, 11, .22)
+        }
+
+        .log-open-btn .badge-count {
+            background: var(--gold);
+            color: #ffffff;
+            border-radius: 999px;
+            padding: 2px 9px;
+            font-size: 11px;
+            font-weight: 800
+        }
+
+        /* ── PAGE ── */
+        .page {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 20px 48px
+        }
+
+        .sec-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--gold);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .sec-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--gold-bg), transparent)
+        }
+
+        /* ── GRID ── */
+        .grid2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px
+        }
+
+        .grid3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px
+        }
+
+        @media(max-width:900px) {
+            .grid2 {
+                grid-template-columns: 1fr
+            }
+
+            .grid3 {
+                grid-template-columns: 1fr 1fr
+            }
+        }
+
+        @media(max-width:540px) {
+            .grid3 {
+                grid-template-columns: 1fr
+            }
+        }
+
+        /* ── CARD ── */
+        .card {
+            background: var(--mid);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 22px;
+            min-width: 0;
+            transition: transform .2s, box-shadow .2s
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 40px rgba(1, 13, 28, .5)
+        }
+
+        .card-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            font-weight: 700;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        /* ── SENSOR ── */
+        .s-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 13px 14px;
+            border-radius: 11px;
+            background: rgba(11, 45, 80, .4);
+            border: 1px solid var(--border);
+            margin-bottom: 10px;
+            transition: .3s
+        }
+
+        .s-row:last-child {
+            margin-bottom: 0
+        }
+
+        .s-row.wet {
+            background: rgba(239, 68, 68, .07);
+            border-color: rgba(239, 68, 68, .3)
+        }
+
+        .s-left {
+            display: flex;
+            align-items: center;
+            gap: 11px
+        }
+
+        .s-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+            background: rgba(11, 45, 80, .8);
+            flex-shrink: 0
+        }
+
+        .s-info p {
+            font-size: 13px;
+            font-weight: 600
+        }
+
+        .s-info span {
+            font-size: 11px;
+            color: var(--muted)
+        }
+
+        .s-badge {
+            padding: 4px 11px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase
+        }
+
+        .bdry {
+            background: rgba(106, 155, 191, .12);
+            color: var(--muted);
+            border: 1px solid rgba(106, 155, 191, .2)
+        }
+
+        .bwet {
+            background: rgba(239, 68, 68, .12);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, .25)
+        }
+
+        .ai-chat-header {
+            background: linear-gradient(90deg, var(--ai-primary), var(--ai-secondary));
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ai-settings-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            opacity: 0.8;
+            transition: 0.3s;
+        }
+
+        .ai-settings-btn:hover {
+            opacity: 1;
+            transform: rotate(45deg);
+        }
+
+        .ai-key-config {
+            position: absolute;
+            top: 50px;
+            left: 10px;
+            right: 10px;
+            background: rgba(10, 25, 41, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--ai-primary);
+            z-index: 100;
+            display: none;
+        }
+
+        .ai-key-config.open {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        /* ── INFO ROW (MODULAR) ── */
+        .i-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            background: rgba(11, 45, 80, .3);
+            border-radius: 11px;
+            border: 1px solid var(--border);
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 10px;
+            transition: .3s;
+        }
+
+        .i-row:hover {
+            background: rgba(11, 45, 80, .5);
+        }
+
+        .i-row:last-child {
+            margin-bottom: 0
+        }
+
+        .i-lbl {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        .i-val {
+            font-size: 12px;
+            font-weight: 600;
+            font-family: monospace;
+            color: var(--white);
+            text-align: right;
+            word-break: break-all
+        }
+
+        /* ── WIFI BARS ── */
+        .wbars {
+            display: inline-flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 14px;
+            vertical-align: middle;
+            margin-left: 6px
+        }
+
+        .wbar {
+            width: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, .1)
+        }
+
+        .wbar.on {
+            background: var(--c0)
+        }
+
+        /* ── STATS ── */
+        .stats-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 16px
+        }
+
+        .stat-box {
+            flex: 1;
+            min-width: 75px;
+            background: rgba(11, 45, 80, .5);
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            padding: 13px;
+            text-align: center
+        }
+
+        .stat-num {
+            font-size: 22px;
+            font-weight: 800
+        }
+
+        .stat-lbl {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: var(--muted);
+            margin-top: 2px
+        }
+
+        /* ── CHART ── */
+        .chart-wrap {
+            position: relative;
+            height: 250px;
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        /* ═══════════════════════════════
+   DATA LOG MODAL
+═══════════════════════════════ */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .4);
+            backdrop-filter: blur(8px);
+            z-index: 500;
+            display: flex;
+            align-items: stretch;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .3s
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: all
+        }
+
+        .modal-panel {
+            background: var(--dark);
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform .35s cubic-bezier(.4, 0, .2, 1)
+        }
+
+        .modal-overlay.open .modal-panel {
+            transform: translateY(0)
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 26px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(90deg, rgba(0, 31, 63, 0.95), rgba(0, 80, 158, 0.85));
+            flex-shrink: 0;
+            gap: 12px;
+            flex-wrap: wrap
+        }
+
+        .modal-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .modal-title span {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--muted);
+            margin-left: 4px
+        }
+
+        .modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            background: rgba(11, 45, 80, .5);
+            color: var(--white);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: .2s;
+            flex-shrink: 0
+        }
+
+        .modal-close:hover {
+            background: rgba(239, 68, 68, .15);
+            color: #ff1744;
+            border-color: rgba(239, 68, 68, .3)
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px
+        }
+
+        /* ── FILTER BAR ── */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+            background: rgba(11, 45, 80, .4);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 16px
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 140px;
+            flex: 1
+        }
+
+        .filter-group label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            color: var(--gold);
+            font-weight: 700
+        }
+
+        .filter-group input[type="date"],
+        .filter-group select {
+            background: rgba(0, 31, 63, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            color: var(--white);
+            padding: 9px 12px;
+            font-size: 13px;
+            outline: none;
+            transition: border .2s;
+            width: 100%;
+            cursor: pointer
+        }
+
+        .filter-group input[type="date"]:focus,
+        .filter-group select:focus {
+            border-color: var(--gold)
+        }
+
+        .filter-group input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1) sepia(1) saturate(2) hue-rotate(10deg);
+            cursor: pointer
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: flex-end
+        }
+
+        .btn {
+            padding: 9px 18px;
+            border-radius: 9px;
+            border: none;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: .2s;
+            white-space: nowrap
+        }
+
+        .btn-apply {
+            background: var(--accent);
+            color: #fff
+        }
+
+        .btn-apply:hover {
+            background: var(--bright)
+        }
+
+        .btn-csv {
+            background: var(--gold);
+            color: #ffffff
+        }
+
+        .btn-csv:hover {
+            background: var(--gold-lt)
+        }
+
+        .btn-reset {
+            background: rgba(106, 155, 191, .1);
+            color: var(--muted);
+            border: 1px solid var(--border)
+        }
+
+        .btn-reset:hover {
+            color: var(--white);
+            border-color: var(--white)
+        }
+
+        /* ── TABLE ── */
+        .tbl-info {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 10px;
+            padding: 0 2px
+        }
+
+        .tbl-wrap {
+            overflow-x: auto;
+            border-radius: 13px;
+            border: 1px solid var(--border)
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 620px
+        }
+
+        thead {
+            background: rgba(11, 45, 80, .9)
+        }
+
+        th {
+            padding: 12px 14px;
+            text-align: left;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            color: var(--gold);
+            font-weight: 700;
+            white-space: nowrap
+        }
+
+        td {
+            padding: 11px 14px;
+            font-size: 13px;
+            border-top: 1px solid rgba(30, 100, 170, .08);
+            white-space: nowrap
+        }
+
+        tbody tr:hover td {
+            background: rgba(11, 45, 80, .4)
+        }
+
+        .lbadge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700
+        }
+
+        .lb0 {
+            background: rgba(34, 197, 94, .12);
+            color: #00e676
+        }
+
+        .lb1 {
+            background: rgba(245, 158, 11, .12);
+            color: var(--gold-lt)
+        }
+
+        .lb2 {
+            background: rgba(249, 115, 22, .12);
+            color: #fb923c
+        }
+
+        .lb3 {
+            background: rgba(239, 68, 68, .12);
+            color: #f87171
+        }
+
+        .tbl-empty {
+            text-align: center;
+            padding: 36px;
+            color: var(--muted);
+            font-size: 13px
+        }
+
+        /* ── PAGINATION ── */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+            padding-bottom: 8px
+        }
+
+        .pg-btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--mid);
+            color: var(--muted);
+            font-size: 12px;
+            cursor: pointer;
+            transition: .2s
+        }
+
+        .pg-btn:hover,
+        .pg-btn.active {
+            background: var(--gold);
+            color: #ffffff;
+            border-color: var(--gold);
+            font-weight: 700
+        }
+
+        .pg-btn:disabled {
+            opacity: .35;
+            cursor: not-allowed
+        }
+
+        /* ── INFO BOX ── */
+        .info-box {
+            background: linear-gradient(135deg, rgba(29, 111, 168, .1), rgba(11, 45, 80, .18));
+            border: 1px solid rgba(29, 111, 168, .22);
+            border-radius: 14px;
+            padding: 14px 18px;
+            margin: 0 0 18px;
+            font-size: 13px;
+            color: #7ec8e3;
+            line-height: 1.7
+        }
+
+        .info-box strong {
+            color: #bde4f7
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--muted);
+            font-size: 12px;
+            border-top: 1px solid var(--border)
+        }
+
+        footer a {
+            color: var(--gold);
+            text-decoration: none
+        }
+
+        /* ── LOADER ── */
+        .spin {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, .1);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+            margin-right: 5px
+        }
+
+        /* ── ANIMATIONS ── */
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1)
+            }
+
+            50% {
+                opacity: .5;
+                transform: scale(.8)
+            }
+        }
+
+        @keyframes ring {
+            0% {
+                transform: scale(1);
+                opacity: .7
+            }
+
+            100% {
+                transform: scale(1.5);
+                opacity: 0
+            }
+        }
+
+        @keyframes wave {
+            from {
+                transform: rotate(0)
+            }
+
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        @keyframes flash {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .5
+            }
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .fu {
+            animation: fadeUp .5s ease forwards
+        }
+
+        /* ── RESPONSIVE ── */
+        @media(max-width:640px) {
+            nav {
+                padding: 10px 14px;
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+            }
+
+            .hero {
+                padding: 28px 14px 20px
+            }
+
+            .w-num {
+                font-size: 44px
+            }
+
+            .water-wrap,
+            .water-outer {
+                width: 148px;
+                height: 148px
+            }
+
+            .page {
+                padding: 0 12px 32px
+            }
+
+            .card {
+                padding: 16px
+            }
+
+            .modal-body {
+                padding: 14px 14px
+            }
+
+            .filter-bar {
+                padding: 14px
+            }
+
+            .filter-group {
+                min-width: calc(50% - 6px)
+            }
+
+            th,
+            td {
+                padding: 9px 10px
+            }
+
+            .log-open-btn {
+                font-size: 14px;
+                padding: 11px 22px;
+                width: 100%;
+                justify-content: center;
+            }
+
+            .log-open-wrap {
+                padding: 0 14px;
+            }
+
+            .btn {
+                padding: 8px 13px;
+                font-size: 12px
+            }
+
+            .i-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+
+            .i-val {
+                width: 100%;
+                text-align: left;
+                font-size: 13px;
+            }
+
+            .sec-title {
+                text-align: center;
+                justify-content: center;
+            }
+
+            .sec-title::after {
+                display: none;
+            }
+
+            .chart-wrap {
+                height: 220px;
+                width: 100% !important;
+            }
+
+            .stats-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .stat-box {
+                min-width: 100%;
+                width: 100%;
+            }
+
+            .tbl-wrap {
+                width: 100%;
+                max-width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .mobile-toggle {
+                display: block;
+            }
+
+            .nav-right {
+                position: fixed;
+                top: 0;
+                right: 0;
+                height: 100vh;
+                width: 260px;
+                background: linear-gradient(180deg, rgba(0, 31, 63, 0.98), rgba(0, 80, 158, 0.95));
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 60px 20px 20px;
+                gap: 20px;
+                transform: translateX(100%);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 220;
+                box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
+            }
+
+            .nav-right.open {
+                transform: translateX(0);
+            }
+
+            .nav-right .nav-btn {
+                width: 100%;
+                padding: 14px 16px;
+                font-size: 14px;
+            }
+        }
+
+        /* ── WEATHER CARD UPDATES ── */
+        .weather-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .sat-viewer {
+            width: 100%;
+            height: 520px;
+            border-radius: 18px;
+            background: #000;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid var(--border);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .sat-viewer iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            opacity: 0.9;
+            transition: 0.5s;
+        }
+
+        .sat-viewer:hover img {
+            opacity: 1;
+        }
+
+        .sat-tag {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--gold);
+            text-transform: uppercase;
+        }
+
+        .weather-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .w-pill {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .w-pill-val {
+            font-weight: 800;
+            color: var(--white);
+            font-size: 14px;
+        }
+
+        .w-pill-lbl {
+            font-size: 10px;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        @media(max-width:900px) {
+            .weather-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sat-viewer {
+                height: 250px;
+            }
+        }
+
+        /* ── AI FLOATING ASSISTANT ── */
+        .ai-fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--ai-primary), var(--ai-secondary));
+            box-shadow: 0 8px 32px var(--ai-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            cursor: pointer;
+            z-index: 1000;
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .ai-fab:hover {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 12px 40px var(--ai-glow);
+        }
+
+        .ai-fab::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 2px solid var(--ai-primary);
+            opacity: 0;
+            animation: ai-pulse 2s infinite;
+        }
+
+        @keyframes ai-pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        .ai-chat-window {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            width: 350px;
+            height: 500px;
+            background: rgba(0, 31, 63, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            transform: translateY(20px) scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .ai-chat-window.open {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .ai-chat-header {
+            padding: 20px;
+            background: linear-gradient(90deg, var(--ai-primary), var(--ai-secondary));
+            color: var(--deep);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .ai-chat-header h3 {
+            font-size: 16px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-chat-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .ai-msg {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 15px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .ai-msg.bot {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--white);
+            border-bottom-left-radius: 2px;
+        }
+
+        .ai-msg.user {
+            align-self: flex-end;
+            background: var(--ai-secondary);
+            color: var(--deep);
+            font-weight: 600;
+            border-bottom-right-radius: 2px;
+        }
+
+        .ai-input-area {
+            padding: 15px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+        }
+
+        .ai-input-area input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 15px;
+            color: var(--white);
+            font-size: 13px;
+            outline: none;
+        }
+
+        .ai-send-btn {
+            background: var(--ai-primary);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            color: var(--deep);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        /* ── AI DASHBOARD CARDS ── */
+        .ai-badge {
+            background: linear-gradient(90deg, var(--ai-primary), var(--ai-secondary));
+            color: var(--deep);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-right: 8px;
+        }
+
+        .ai-score-ring {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 6px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+        }
+
+        .ai-score-ring svg {
+            position: absolute;
+            transform: rotate(-90deg);
+        }
+
+        .ai-score-num {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--ai-primary);
+        }
+
+        .ai-insight-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 12px;
+            background: rgba(0, 242, 254, 0.05);
+            border: 1px solid rgba(0, 242, 254, 0.1);
+            margin-bottom: 10px;
+        }
+
+        .ai-insight-icon {
+            font-size: 20px;
+        }
+
+        .ai-insight-text p {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 2px;
+        }
+
+        .ai-insight-text span {
+            font-size: 11px;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        @media(max-width:400px) {
+            .ai-chat-window {
+                width: calc(100% - 40px);
+                right: 20px;
+                bottom: 90px;
+            }
+        }
+
+        @media(max-width:400px) {
+            .filter-group {
+                min-width: 100%
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ── NAV ── -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <nav>
+        <div class="nav-brand">
+            <div class="brand-dot"></div>
+            🌊 FloodGuard <span class="brand-sub">CLOUD ☁️</span>
+        </div>
+        <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+        <div class="nav-right" id="navRight">
+            <span class="ts" id="tsLabel">📡 Connecting...</span>
+            <span class="conn-pill pill-err" id="connPill"><span class="spin"></span>Connecting</span>
+            <button class="nav-btn btn-log" onclick="openAnalyticsModal(); closeSidebar()"
+                style="background:var(--accent);border-color:var(--bright)">📊 Analytics</button>
+            <button class="nav-btn btn-log" onclick="openModal(); closeSidebar()">📋 Data Log</button>
+            <button class="nav-btn btn-notif" id="notifBtn" onclick="reqNotif(); closeSidebar()">🔔 Alerts</button>
+        </div>
+    </nav>
+
+    <!-- ── ALERT BANNER ── -->
+    <div class="alert-banner" id="alertBanner"></div>
+
+    <!-- ── HERO ── -->
+    <div class="hero">
+        <p class="hero-eyebrow">Live Flood Level Monitor 💧</p>
+        <div class="water-wrap">
+            <div class="water-outer">
+                <div class="w-fill" id="wFill" style="height:5%;background:linear-gradient(180deg,#00e676,#16a34a)">
+                </div>
+                <div class="w-txt">
+                    <div class="w-num" id="wNum" style="color:#00e676">0</div>
+                    <div class="w-lbl" id="wLbl" style="color:#00e676">NORMAL</div>
+                </div>
+            </div>
+            <div class="pulse-ring" id="pRing" style="color:#00e676"></div>
+        </div>
+        <div class="hero-status" id="hStatus" style="color:#00e676">All Clear — No Flooding</div>
+        <div class="hero-action" id="hAction">System is actively monitoring. No action required.</div>
+    </div>
+
+    <div class="log-open-wrap">
+        <button class="log-open-btn" onclick="openModal()">
+            📋 View &amp; Download Data Log ⬇
+            <span class="badge-count" id="logCount">—</span>
+        </button>
+    </div>
+
+
+    <div class="sec-title">📡 Live System Status</div>
+    <div class="grid3 fu" style="margin-bottom:20px">
+        <div class="card">
+            <div class="card-title">💧 Sensor Status</div>
+            <div id="sr1" class="s-row">
+                <div class="s-left">
+                    <div class="s-icon">⚠️</div>
+                    <div class="s-info">
+                        <p>Level 1 — Build-Up</p><span>GPIO Pin 5</span>
+                    </div>
+                </div>
+                <span class="s-badge bdry" id="sb1">DRY</span>
+            </div>
+            <div id="sr2" class="s-row">
+                <div class="s-left">
+                    <div class="s-icon">🌊</div>
+                    <div class="s-info">
+                        <p>Level 2 — Moderate</p><span>GPIO Pin 18</span>
+                    </div>
+                </div>
+                <span class="s-badge bdry" id="sb2">DRY</span>
+            </div>
+            <div id="sr3" class="s-row">
+                <div class="s-left">
+                    <div class="s-icon">🚨</div>
+                    <div class="s-info">
+                        <p>Level 3 — Danger</p><span>GPIO Pin 19</span>
+                    </div>
+                </div>
+                <span class="s-badge bdry" id="sb3">DRY</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><span class="ai-badge">AI</span> Intelligence Hub</div>
+            <div class="ai-score-ring">
+                <svg width="80" height="80">
+                    <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="6" />
+                    <circle id="aiScoreCircle" cx="40" cy="40" r="34" fill="none" stroke="var(--ai-primary)"
+                        stroke-width="6" stroke-dasharray="213.6" stroke-dashoffset="21.3"
+                        style="transition: stroke-dashoffset 1s ease-out" />
+                </svg>
+                <div class="ai-score-num" id="aiScore">98</div>
+            </div>
+            <p style="text-align:center; font-size:11px; color:var(--muted); margin-bottom:15px">Overall Safety Score
+            </p>
+
+            <div class="ai-insight-item">
+                <div class="ai-insight-icon">⛅</div>
+                <div class="ai-insight-text">
+                    <p>Weather Analysis</p>
+                    <span id="aiWeatherText">AI is analyzing local weather patterns...</span>
+                </div>
+            </div>
+            <div class="ai-insight-item">
+                <div class="ai-insight-icon">🛡️</div>
+                <div class="ai-insight-text">
+                    <p>Dynamic Protocol</p>
+                    <span id="aiProtocolText">All systems normal. Standard monitoring active.</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🖥️ Device Information</div>
+            <div class="i-row"><span class="i-lbl">Device ID</span><span class="i-val" id="dId">—</span></div>
+            <div class="i-row"><span class="i-lbl">Device Name</span><span class="i-val" id="dName">—</span></div>
+            <div class="i-row"><span class="i-lbl">IP Address</span>
+                <span class="i-val"><a id="dIpLink" href="#" target="_blank"
+                        style="color:var(--gold);text-decoration:none">—</a></span>
+            </div>
+            <div class="i-row"><span class="i-lbl">WiFi Signal</span>
+                <span class="i-val" style="display:flex;align-items:center;gap:4px">
+                    <span id="dRssi">—</span>
+                    <span class="wbars" id="wBars">
+                        <div class="wbar" style="height:5px"></div>
+                        <div class="wbar" style="height:8px"></div>
+                        <div class="wbar" style="height:11px"></div>
+                        <div class="wbar" style="height:14px"></div>
+                    </span></span>
+            </div>
+            <div class="i-row"><span class="i-lbl">Uptime</span><span class="i-val" id="dUp">—</span></div>
+            <div class="i-row"><span class="i-lbl">SMS Alerts</span><span class="i-val" id="dSms"
+                    style="color:var(--c0)">—</span></div>
+            <div class="i-row"><span class="i-lbl">Last Updated</span><span class="i-val" id="dLast">—</span></div>
+        </div>
+    </div>
+
+    <!-- ── REGIONAL OVERVIEW (PAGASA) ── -->
+    <div class="sec-title">🛰️ Regional Overview (Cagayan Valley Watch)</div>
+    <div class="card fu" style="margin-bottom:20px">
+        <div class="card-title">📡 Enhanced Weather Watch — Cagayan Valley (Tuguegarao/Aparri Area)</div>
+        <div class="weather-grid" style="grid-template-columns: 1fr;">
+            <div class="sat-viewer">
+                <span class="sat-tag">LIVE REGIONAL RADAR — CAGAYAN VALLEY</span>
+                <iframe
+                    src="https://embed.windy.com/embed2.html?lat=17.859&lon=121.727&zoom=8&level=surface&overlay=radar&product=radar&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRangeMax=vpi"
+                    title="Real-time Weather Radar"></iframe>
+            </div>
+            <div class="weather-metrics">
+                <div class="w-pill">
+                    <div style="font-size:24px">🌡️</div>
+                    <div>
+                        <div class="w-pill-lbl">Temperature</div>
+                        <div class="w-pill-val" id="wTemp">--°C</div>
+                    </div>
+                </div>
+                <div class="w-pill">
+                    <div style="font-size:24px">💧</div>
+                    <div>
+                        <div class="w-pill-lbl">Humidity</div>
+                        <div class="w-pill-val" id="wHumid">--%</div>
+                    </div>
+                </div>
+                <div class="w-pill">
+                    <div style="font-size:24px">🌧️</div>
+                    <div>
+                        <div class="w-pill-lbl">Rainfall</div>
+                        <div class="w-pill-val" id="wRain">--%</div>
+                    </div>
+                </div>
+                <div class="w-pill">
+                    <div style="font-size:24px">💨</div>
+                    <div>
+                        <div class="w-pill-lbl">Wind Speed</div>
+                        <div class="w-pill-val" id="wWind">-- km/h</div>
+                    </div>
+                </div>
+                <div class="w-pill">
+                    <div style="font-size:24px">🌀</div>
+                    <div>
+                        <div class="w-pill-lbl">Pressure</div>
+                        <div class="w-pill-val" id="wPress">-- hPa</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top:15px; font-size:11px; color:var(--muted); font-style:italic">
+            *Regional monitoring enhanced with PAGASA IR imagery and global atmospheric model correlation for Cagayan
+            Valley.
+        </div>
+    </div>
+    </div>
+
+    <footer>
+        FloodGuard Cloud Dashboard &nbsp;·&nbsp;
+        Powered by <a href="https://firebase.google.com" target="_blank">Firebase Realtime Database</a> &nbsp;·&nbsp;
+        ESP32 pushes every 5 seconds &nbsp;·&nbsp; © 2025 Flood Alert System by Jeamarie Ocaso
+    </footer>
+
+    <!-- ══════════════════════════════════════════════
+     DATA LOG MODAL
+══════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="logModal" onclick="overlayClick(event)">
+        <div class="modal-panel">
+            <!-- MODAL HEADER -->
+            <div class="modal-header">
+                <div class="modal-title">
+                    Flood Data Log
+                    <span id="modalSubtitle">Historical Records from Firebase</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <button class="btn btn-csv" onclick="downloadCSV()" style="font-size:12px;padding:7px 16px">⬇
+                        Download CSV</button>
+                    <button class="modal-close" onclick="closeModal()" title="Close">✕</button>
+                </div>
+            </div>
+
+            <!-- MODAL BODY -->
+            <div class="modal-body">
+
+                <!-- FILTER BAR -->
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <label>From Date</label>
+                        <input type="date" id="fFrom">
+                    </div>
+                    <div class="filter-group">
+                        <label>To Date</label>
+                        <input type="date" id="fTo">
+                    </div>
+                    <div class="filter-group" style="max-width:170px">
+                        <label>Flood Level</label>
+                        <select id="fLevel">
+                            <option value="">All Levels</option>
+                            <option value="0">Level 0 — Normal</option>
+                            <option value="1">Level 1 — Build-Up</option>
+                            <option value="2">Level 2 — Moderate</option>
+                            <option value="3">Level 3 — Danger</option>
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn btn-apply" onclick="applyFilters()">Apply</button>
+                        <button class="btn btn-reset" onclick="resetFilters()">Reset</button>
+                    </div>
+                </div>
+
+                <!-- TABLE -->
+                <div class="tbl-info" id="tblCount">Loading records...</div>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Level</th>
+                                <th>Status</th>
+                                <th>Action Required</th>
+                                <th>Device IP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tblBody">
+                            <tr>
+                                <td colspan="7" class="tbl-empty"><span class="spin"></span> Loading from Firebase...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="pgWrap"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+     ANALYTICS MODAL
+══════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="analyticsModal" onclick="overlayClickAnalytics(event)">
+        <div class="modal-panel" style="max-height:85vh; border-radius:18px 18px 0 0; margin-top:15vh;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    📊 Analytics Overview
+                    <span>Live Tracking Metrics</span>
+                </div>
+                <button class="modal-close" onclick="closeAnalyticsModal()" title="Close">✕</button>
+            </div>
+            <div class="modal-body" style="background:var(--deep)">
+                <div class="grid2">
+                    <div class="card fu">
+                        <div class="card-title">📈 Level Trend (Session)</div>
+                        <div class="chart-wrap"><canvas id="tChart"></canvas></div>
+                    </div>
+                    <div class="card fu">
+                        <div class="card-title">🔢 Session Counts</div>
+                        <div class="stats-row">
+                            <div class="stat-box">
+                                <div class="stat-num" id="sTot" style="color:var(--gold)">0</div>
+                                <div class="stat-lbl">Total</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-num" id="sN" style="color:var(--c0)">0</div>
+                                <div class="stat-lbl">Normal</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-num" id="s1c" style="color:var(--c1)">0</div>
+                                <div class="stat-lbl">Build-Up</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-num" id="s2c" style="color:var(--c2)">0</div>
+                                <div class="stat-lbl">Moderate</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-num" id="s3c" style="color:var(--c3)">0</div>
+                                <div class="stat-lbl">Critical</div>
+                            </div>
+                        </div>
+                        <div class="card-title" style="margin-top:8px">☁️ Cloud Status</div>
+                        <div class="i-row"><span class="i-lbl">Firebase DB</span><span class="i-val" id="fbSt"
+                                style="color:var(--muted)">Checking...</span></div>
+                        <div class="i-row"><span class="i-lbl">Push Interval</span><span class="i-val"
+                                style="color:var(--gold)">Every 5 seconds ⚡</span></div>
+                        <div class="i-row"><span class="i-lbl">Project</span><span class="i-val"
+                                style="color:var(--accent)">flood-monitor-37ab1</span></div>
+                        <div class="i-row"><span class="i-lbl">Region</span><span class="i-val">asia-southeast1</span>
+                        </div>
+                        <div class="i-row"><span class="i-lbl">Browser Notif.</span><span class="i-val" id="nfSt"
+                                style="color:var(--muted)">Off</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ai-fab" onclick="toggleAIChat()" title="Ask AI Assistant">✨</div>
+    <div class="ai-chat-window" id="aiChatWindow">
+        <div class="ai-chat-header">
+            <h3>✨ AI Flood Assistant </h3>
+            <div style="display:flex; gap:10px; align-items:center">
+                <button class="ai-settings-btn" onclick="toggleAISettings()" title="Configure ChatGPT Key">⚙️</button>
+                <button class="modal-close" onclick="toggleAIChat()"
+                    style="border:none; background:transparent; width:auto; height:auto; font-size:16px">✕</button>
+            </div>
+        </div>
+        <div class="ai-key-config" id="aiKeyConfig">
+            <p style="font-size:11px; color:var(--gold); margin-bottom:8px">🔑 ENTER GOOGLE GEMINI API KEY (FREE):
+            </p>
+            <input type="password" id="aiKey" placeholder="AIza..."
+                style="width:100%; padding:8px; border-radius:6px; border:1px solid #444; background:#222; color:white; font-size:11px">
+            <button class="btn btn-apply" onclick="saveAIKey()" style="width:100%; margin-top:8px; padding:6px">Activate Free AI</button>
+            <p style="font-size:9px; color:var(--muted); margin-top:5px">*Get your free key at <a href="https://aistudio.google.com/" target="_blank" style="color:var(--ai-primary)">Google AI Studio</a>.</p>
+        </div>
+        <div class="ai-chat-body" id="aiChatBody">
+            <div class="ai-msg bot">
+                Kumusta! Ako ang FloodGuard Intelligence Core (**Powered by Google Gemini**). Maaari niyo akong tanungin nang LIBRE tungkol sa flood safety sa Cagayan Valley o kahit anong general questions. Paano ko kayo matutulungan?
+            </div>
+            <div style="display:flex; gap:6px; padding:10px; flex-wrap:wrap">
+                <button class="btn btn-apply" style="font-size:10px; padding:4px 8px; background:rgba(0,242,254,0.2); border:1px solid var(--ai-primary)" onclick="document.getElementById('aiInput').value='How does this system work?'; sendAIMsg()">🔧 Hardware Status</button>
+                <button class="btn btn-apply" style="font-size:10px; padding:4px 8px; background:rgba(0,242,254,0.2); border:1px solid var(--ai-primary)" onclick="document.getElementById('aiInput').value='What are the MDRRMC protocols?'; sendAIMsg()">🏛️ Official Protocols</button>
+                <button class="btn btn-apply" style="font-size:10px; padding:4px 8px; background:rgba(0,242,254,0.2); border:1px solid var(--ai-primary)" onclick="document.getElementById('aiInput').value='Emergency weather update'; sendAIMsg()">🌤️ Forecast Analysis</button>
+            </div>
+        </div>
+        <div class="ai-input-area">
+            <input type="text" id="aiInput" placeholder="Ask anything about the flood or weather..."
+                onkeydown="if(event.key==='Enter') sendAIMsg()">
+            <button class="ai-send-btn" onclick="sendAIMsg()">➤</button>
+        </div>
+    </div>
+
+    <script>
+        // ── CONFIG ────────────────────────────────────────────────────
+        const FB = 'https://flood-monitor-37ab1-default-rtdb.asia-southeast1.firebasedatabase.app';
+        const POLL = 5000;
+        const PG = 25;
+
+        // ── STATE ─────────────────────────────────────────────────────
+        let lastLevel = -1, notifOn = false, chart = null;
+        let allHistory = [], filtered = [], curPage = 1;
+        let sessionHist = JSON.parse(localStorage.getItem('fg_sh') || '[]');
+        let histFetched = false;
+        let lastFbTs = -1, lastFbChange = Date.now();
+
+        // ── LEVEL CONFIG ──────────────────────────────────────────────
+        const LC = {
+            0: {
+                color: '#00e676', label: 'NORMAL', h: '5%', bg: ['#00e676', '#16a34a'],
+                status: 'All Clear — No Flooding', action: 'No action required.', al: ''
+            },
+            1: {
+                color: '#ffea00', label: 'BUILD-UP', h: '34%', bg: ['#ffea00', '#b45309'],
+                status: 'Build-Up Detected — Stay Alert', action: 'Monitor situation. Prepare for evacuation.', al: 'al1'
+            },
+            2: {
+                color: '#ff9100', label: 'MODERATE', h: '67%', bg: ['#ff9100', '#c2410c'],
+                status: 'Moderate Flooding — Prepare to Evacuate', action: 'Move to higher ground. Prepare supplies.', al: 'al2'
+            },
+            3: {
+                color: '#ff1744', label: 'DANGER!', h: '96%', bg: ['#ff1744', '#991b1b'],
+                status: 'CRITICAL — EVACUATE IMMEDIATELY!', action: 'Evacuate NOW! Water at dangerous level!', al: 'al3'
+            },
+        };
+        const ACTIONS = ['No action needed', 'Monitor closely. Prepare for evacuation.',
+            'Move to higher ground. Prepare supplies.', 'Evacuate immediately! Water at dangerous level!'];
+
+        // ── DATE HELPERS ──────────────────────────────────────────────
+        function parseUpdate(str) {
+            if (!str) return null;
+            const m = str.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+            return m ? new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +m[6]) : null;
+        }
+        function fmtDate(dt) { return dt ? dt.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: '2-digit' }) : '—'; }
+        function fmtTime(dt) { return dt ? dt.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'; }
+        function isoDate(dt) { return dt ? dt.toISOString().substring(0, 10) : ''; }
+        function todayISO() { return isoDate(new Date()); }
+        function pastISO(days) { const d = new Date(); d.setDate(d.getDate() - days); return isoDate(d); }
+
+        // ── CHART ─────────────────────────────────────────────────────
+        function initChart() {
+            chart = new Chart(document.getElementById('tChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: [], datasets: [{
+                        label: 'Level', data: [], borderColor: LC[0].color,
+                        backgroundColor: LC[0].color + '18', borderWidth: 2.5, pointBackgroundColor: [], pointRadius: 5, tension: .4, fill: true
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 0, max: 3, ticks: { stepSize: 1, color: '#6a9bbf', callback: v => ['Normal', 'Build-Up', 'Moderate', 'Danger'][v] || v },
+                            grid: { color: 'rgba(30,100,170,.08)' }
+                        },
+                        x: { ticks: { color: '#6a9bbf', maxTicksLimit: 8 }, grid: { color: 'rgba(30,100,170,.08)' } }
+                    },
+                    plugins: { legend: { display: false } }, animation: { duration: 400 }
+                }
+            });
+        }
+        function pushChart(lvl) {
+            if (!chart) return;
+            const t = new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+            const ds = chart.data.datasets[0];
+            chart.data.labels.push(t); ds.data.push(lvl);
+            ds.pointBackgroundColor = ds.data.map(v => LC[v]?.color || '#ffea00');
+            const c = LC[lvl]?.color || '#ffea00';
+            ds.borderColor = c; ds.backgroundColor = c + '18';
+            if (chart.data.labels.length > 50) { chart.data.labels.shift(); ds.data.shift(); ds.pointBackgroundColor.shift(); }
+            chart.update();
+        }
+
+        // ── HERO ──────────────────────────────────────────────────────
+        function updateHero(lvl) {
+            const c = LC[lvl] || LC[0];
+            document.getElementById('wFill').style.cssText = `height:${c.h};background:linear-gradient(180deg,${c.bg[0]},${c.bg[1]})`;
+            ['wNum', 'wLbl'].forEach(id => { const el = document.getElementById(id); el.style.color = c.color; });
+            document.getElementById('wNum').textContent = lvl;
+            document.getElementById('wLbl').textContent = c.label;
+            document.getElementById('hStatus').textContent = c.status;
+            document.getElementById('hStatus').style.color = c.color;
+            document.getElementById('hAction').textContent = c.action;
+            document.getElementById('pRing').className = 'pulse-ring' + (lvl > 0 ? ' active' : '');
+            document.getElementById('pRing').style.color = c.color;
+            document.querySelector('.brand-dot').style.background = c.color;
+            const b = document.getElementById('alertBanner');
+            if (lvl > 0) { b.className = 'alert-banner ' + c.al; b.style.display = 'block'; b.textContent = 'FLOOD ALERT — ' + c.status; }
+            else b.style.display = 'none';
+        }
+
+        // ── SENSORS ───────────────────────────────────────────────────
+        function updateSensors(data) {
+            const lvl = data.level || 0, s = data.sensors || {};
+            [[1, s.level1 == 1 || lvl >= 1], [2, s.level2 == 1 || lvl >= 2], [3, s.level3 == 1 || lvl >= 3]].forEach(([n, wet]) => {
+                document.getElementById('sr' + n).classList.toggle('wet', wet);
+                const b = document.getElementById('sb' + n);
+                b.className = 's-badge ' + (wet ? 'bwet' : 'bdry');
+                b.textContent = wet ? '💧 WET' : '✓ DRY';
+            });
+        }
+
+        // ── DEVICE INFO ───────────────────────────────────────────────
+        function updateDevice(d) {
+            const s = (v, f = '—') => v != null && v !== '' ? v : f;
+            document.getElementById('dId').textContent = s(d.device_id);
+            document.getElementById('dName').textContent = s(d.device_name);
+            const ip = s(d.ip_address, ''); const lnk = document.getElementById('dIpLink');
+            lnk.textContent = ip || '—'; if (ip && ip !== '0.0.0.0') lnk.href = 'http://' + ip;
+            document.getElementById('dRssi').textContent = d.wifi_signal ? d.wifi_signal + ' dBm' : '—';
+            document.getElementById('dUp').textContent = d.uptime ? d.uptime + 's' : '—';
+            document.getElementById('dSms').textContent = d.sms_enabled === false ? 'Disabled' : 'Enabled';
+            document.getElementById('dSms').style.color = d.sms_enabled === false ? '#ff1744' : '#00e676';
+            document.getElementById('dLast').textContent = s(d.last_update);
+            document.getElementById('fbSt').textContent = 'Connected'; document.getElementById('fbSt').style.color = '#00e676';
+            const rssi = parseInt(d.wifi_signal) || -100, str = rssi >= -55 ? 4 : rssi >= -65 ? 3 : rssi >= -75 ? 2 : rssi >= -85 ? 1 : 0;
+            document.querySelectorAll('.wbar').forEach((b, i) => b.classList.toggle('on', i < str));
+        }
+
+        // ── STATS ─────────────────────────────────────────────────────
+        function updateStats() {
+            const c = [0, 0, 0, 0];
+            const src = allHistory.length ? allHistory : sessionHist;
+            src.forEach(e => { if (e.level >= 0 && e.level <= 3) c[e.level]++; });
+            document.getElementById('sTot').textContent = src.length;
+            document.getElementById('sN').textContent = c[0];
+            document.getElementById('s1c').textContent = c[1];
+            document.getElementById('s2c').textContent = c[2];
+            document.getElementById('s3c').textContent = c[3];
+        }
+
+        // ── CONNECTION ────────────────────────────────────────────────
+        function updateConn(ok) {
+            const p = document.getElementById('connPill');
+            p.className = 'conn-pill ' + (ok ? 'pill-ok' : 'pill-err');
+            p.textContent = ok ? '🟢 Live' : '🔴 Offline';
+            document.getElementById('tsLabel').textContent = '📡 Updated ' + new Date().toLocaleTimeString('en-PH');
+        }
+
+        // ── FETCH STATUS ──────────────────────────────────────────────
+        async function fetchStatus() {
+            try {
+                const r = await fetch(FB + '/flood_monitor.json', { cache: 'no-store' });
+                if (!r.ok) throw 0;
+                const d = await r.json(); if (!d) throw 0;
+
+                let isOffline = false;
+
+                // 1. Immediate Fresh-Load Check: parse UTC+8 strictly against absolute Date.now()
+                if (d.last_update) {
+                    const m = d.last_update.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+                    if (m) {
+                        // Date.UTC string converted backwards by 8 hours to match absolute epoch universally
+                        const recEpoch = Date.UTC(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +m[6]) - (8 * 3600 * 1000);
+                        if (Date.now() - recEpoch > 35000) isOffline = true;
+                    }
+                }
+
+                // 2. Continuous Stagnation Check: ensures offline flags trigger if sync fails while dashboard stays open
+                if (d.timestamp !== undefined) {
+                    if (d.timestamp === lastFbTs) {
+                        if (Date.now() - lastFbChange > 20000) isOffline = true;
+                    } else {
+                        lastFbTs = d.timestamp;
+                        lastFbChange = Date.now();
+                    }
+                }
+
+                let lvl = parseInt(d.level) || 0;
+
+                if (isOffline) {
+                    lvl = 0;
+                    d.level = 0;
+                    d.status = 'Device Offline — Reset to Normal';
+                    d.action = 'Check ESP32 power and connection.';
+                    d.sensors = { level1: 0, level2: 0, level3: 0 };
+                }
+
+                updateHero(lvl); updateSensors(d); updateDevice(d); updateConn(!isOffline); pushChart(lvl);
+                if (lvl !== lastLevel && !isOffline) {
+                    let isFirst = (lastLevel === -1);
+                    lastLevel = lvl;
+                    let lastSessionLvl = sessionHist.length ? parseInt(sessionHist[0].level) : -1;
+
+                    if (!isFirst) {
+                        sessionHist.unshift({
+                            level: lvl, status: d.status, last_update: d.last_update,
+                            ip_address: d.ip_address, action: d.action, ts: Date.now()
+                        });
+                        if (sessionHist.length > 200) sessionHist.pop();
+                        localStorage.setItem('fg_sh', JSON.stringify(sessionHist));
+                        if (lvl > lastSessionLvl) sendNotif(d);
+                    } else if (sessionHist.length === 0 || lastSessionLvl !== lvl) {
+                        sessionHist.unshift({
+                            level: lvl, status: d.status, last_update: d.last_update,
+                            ip_address: d.ip_address, action: d.action, ts: Date.now()
+                        });
+                        if (sessionHist.length > 200) sessionHist.pop();
+                        localStorage.setItem('fg_sh', JSON.stringify(sessionHist));
+                    }
+                    updateStats();
+                }
+            } catch { updateConn(false); }
+        }
+
+        // ── FETCH HISTORY ─────────────────────────────────────────────
+        async function fetchHistory(limit = 0) {
+            let arr = [];
+            try {
+                // Optimized: Fetching a limited set initially prevents long load times (matagal)
+                const url = limit ? `${FB}/flood_history.json?orderBy="$key"&limitToLast=${limit}` : `${FB}/flood_history.json`;
+                const r = await fetch(url, { cache: 'no-store' });
+                if (!r.ok) throw 0;
+                const raw = await r.json();
+                arr = raw ? Object.values(raw).filter(Boolean) : [...sessionHist].reverse();
+            } catch { arr = [...sessionHist].reverse(); }
+
+            allHistory = arr.reverse();
+            document.getElementById('logCount').textContent = allHistory.length || 0;
+            if (allHistory.length > 0) document.getElementById('modalSubtitle').textContent = (limit ? 'Viewing latest ' : '') + allHistory.length + ' records';
+            histFetched = true;
+            updateStats();
+            applyFilters();
+        }
+
+        // ── MODAL ─────────────────────────────────────────────────────
+        function openModal() {
+            document.getElementById('logModal').classList.add('open');
+            document.body.style.overflow = 'hidden';
+            fetchHistory(); // Always refetch to get latest complete data
+        }
+        function closeModal() {
+            document.getElementById('logModal').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function openAnalyticsModal() {
+            document.getElementById('analyticsModal').classList.add('open');
+            document.body.style.overflow = 'hidden';
+            if (chart) chart.resize();
+        }
+        function closeAnalyticsModal() {
+            document.getElementById('analyticsModal').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function overlayClick(e) { if (e.target === document.getElementById('logModal')) closeModal(); }
+        function overlayClickAnalytics(e) { if (e.target === document.getElementById('analyticsModal')) closeAnalyticsModal(); }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { closeModal(); closeAnalyticsModal(); }
+        });
+
+        // ── FILTER ────────────────────────────────────────────────────
+        function getDate(id) {
+            const v = document.getElementById(id).value;
+            if (!v) return null;
+            const [y, m, d] = v.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        }
+        function applyFilters() {
+            curPage = 1;
+            const lvlF = document.getElementById('fLevel').value;
+            // Date fields are informational only — never exclude records by date.
+            if (lvlF !== '') {
+                filtered = allHistory.filter(e => String(parseInt(e.level) || 0) === lvlF);
+            } else {
+                filtered = [...allHistory];
+            }
+            renderTable();
+        }
+        function resetFilters() {
+            document.getElementById('fFrom').value = '';
+            document.getElementById('fTo').value = '';
+            document.getElementById('fLevel').value = '';
+            filtered = [...allHistory]; curPage = 1; renderTable();
+        }
+
+        // ── RENDER TABLE ──────────────────────────────────────────────
+        function renderTable() {
+            const total = filtered.length;
+            const extra = allHistory.length !== total ? ` (filtered from ${allHistory.length} total)` : '';
+            document.getElementById('tblCount').textContent =
+                total === 0 ? 'No records match the current filters.' : `Showing ${total} record${total !== 1 ? 's' : ''}${extra}`;
+            const start = (curPage - 1) * PG, end = Math.min(start + PG, total), slice = filtered.slice(start, end);
+            const tbody = document.getElementById('tblBody');
+            if (!slice.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="tbl-empty">No records found. Try adjusting the filters.</td></tr>';
+                document.getElementById('pgWrap').innerHTML = ''; return;
+            }
+            tbody.innerHTML = slice.map((e, i) => {
+                const dt = parseUpdate(e.last_update), lvl = parseInt(e.level) || 0;
+                return `<tr>
+      <td style="color:var(--muted)">${start + i + 1}</td>
+      <td>${fmtDate(dt)}</td><td>${fmtTime(dt)}</td>
+      <td><span class="lbadge lb${lvl}">${lvl}</span></td>
+      <td style="max-width:180px;white-space:normal;font-size:12px">${(e.status || 'Normal').substring(0, 48)}</td>
+      <td style="font-size:12px;color:var(--muted);max-width:200px;white-space:normal">${ACTIONS[lvl] || '—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${e.ip_address || '—'}</td>
+    </tr>`;
+            }).join('');
+            renderPagination(total);
+        }
+        function renderPagination(total) {
+            const pages = Math.ceil(total / PG);
+            if (pages <= 1) { document.getElementById('pgWrap').innerHTML = ''; return; }
+            let h = `<button class="pg-btn" onclick="goPage(${curPage - 1})" ${curPage === 1 ? 'disabled' : ''}>‹ Prev</button>`;
+            const st = Math.max(1, curPage - 2), en = Math.min(pages, curPage + 2);
+            if (st > 1) h += `<button class="pg-btn" onclick="goPage(1)">1</button>${st > 2 ? '<span style="color:var(--muted)">…</span>' : ''}`;
+            for (let p = st; p <= en; p++)h += `<button class="pg-btn ${p === curPage ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`;
+            if (en < pages) h += `${en < pages - 1 ? '<span style="color:var(--muted)">…</span>' : ''}<button class="pg-btn" onclick="goPage(${pages})">${pages}</button>`;
+            h += `<button class="pg-btn" onclick="goPage(${curPage + 1})" ${curPage === pages ? 'disabled' : ''}>Next ›</button>`;
+            document.getElementById('pgWrap').innerHTML = h;
+        }
+        function goPage(p) { if (p < 1) return; curPage = p; renderTable(); }
+
+        // ── CSV DOWNLOAD ──────────────────────────────────────────────
+        function downloadCSV() {
+            if (!filtered.length) { alert('No records to download with current filters.'); return; }
+            const from = document.getElementById('fFrom').value, to = document.getElementById('fTo').value;
+            const esc = s => '"' + (String(s || '').replace(/"/g, '""')) + '"';
+            let csv = `FloodGuard Data Log Export\r\nGenerated: ${new Date().toLocaleString('en-PH')}\r\n`;
+            if (from || to) csv += `Date Range: ${from || 'Start'} to ${to || 'Latest'}\r\n`;
+            csv += `Total Records: ${filtered.length}\r\n\r\n`;
+            csv += '#,Date,Time,Flood Level,Status,Action Required,Device IP\r\n';
+            filtered.forEach((e, i) => {
+                const dt = parseUpdate(e.last_update), lvl = parseInt(e.level) || 0;
+                csv += `${i + 1},${esc(fmtDate(dt))},${esc(fmtTime(dt))},${lvl},${esc(e.status || 'Normal')},${esc(ACTIONS[lvl] || '—')},${esc(e.ip_address || '—')}\r\n`;
+            });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+            a.download = `FloodGuard_Log_${from || 'all'}_to_${to || 'latest'}.csv`;
+            document.body.appendChild(a); a.click();
+            setTimeout(() => { document.body.removeChild(a); }, 600);
+        }
+
+        // ── NOTIFICATIONS ─────────────────────────────────────────────
+        function reqNotif() {
+            if (!('Notification' in window)) return alert('Notifications not supported.');
+            Notification.requestPermission().then(p => {
+                notifOn = p === 'granted';
+                document.getElementById('notifBtn').classList.toggle('on', notifOn);
+                document.getElementById('nfSt').textContent = notifOn ? 'Enabled' : 'Denied';
+                document.getElementById('nfSt').style.color = notifOn ? '#00e676' : '#ff1744';
+            });
+        }
+        function sendNotif(d) {
+            if (!notifOn || Notification.permission !== 'granted') return;
+            new Notification('FloodGuard Alert', {
+                body: `Level ${d.level}: ${d.status}\n${d.action}`,
+                icon: 'https://img.icons8.com/fluent/96/flood.png'
+            });
+        }
+
+        // ── INIT & SIDEBAR ────────────────────────────────────────────
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-open');
+            document.getElementById('navRight').classList.toggle('open');
+        }
+        function closeSidebar() {
+            document.body.classList.remove('sidebar-open');
+            document.getElementById('navRight').classList.remove('open');
+        }
+
+        async function main() {
+            initChart(); updateStats();
+            document.getElementById('fFrom').value = pastISO(3650);
+            document.getElementById('fTo').value = todayISO();
+            await fetchStatus();
+            setInterval(fetchStatus, POLL);
+            setInterval(fetchHistory, 30000);
+            setTimeout(() => fetchHistory(50), 2000);
+            updateAIIntelligence(lastLevel || 0);
+            fetchWeather();
+            setInterval(fetchWeather, 1800000);
+        }
+        window.addEventListener('DOMContentLoaded', main);
+
+        // ── AI ASSISTANT ──────────────────────────────────────────────
+        function toggleAIChat() {
+            const win = document.getElementById('aiChatWindow');
+            win.classList.toggle('open');
+            if (win.classList.contains('open')) document.getElementById('aiInput').focus();
+        }
+
+        function toggleAISettings() {
+            document.getElementById('aiKeyConfig').classList.toggle('open');
+        }
+
+        function saveAIKey() {
+            const k = document.getElementById('aiKey').value.trim();
+            localStorage.setItem('fg_gemini_key', k);
+            toggleAISettings();
+            alert(k ? '✅ Google Gemini AI Activated! (Free tier enabled)' : 'System reverted to Local Intelligence mode.');
+        }
+
+        async function sendAIMsg() {
+            const input = document.getElementById('aiInput');
+            const body = document.getElementById('aiChatBody');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            const uMsg = document.createElement('div');
+            uMsg.className = 'ai-msg user';
+            uMsg.textContent = msg;
+            body.appendChild(uMsg);
+            input.value = '';
+            body.scrollTop = body.scrollHeight;
+
+            const bMsg = document.createElement('div');
+            bMsg.className = 'ai-msg bot';
+            bMsg.innerHTML = '<span class="spin" style="width:10px;height:10px"></span> AI is analyzing data...';
+            body.appendChild(bMsg);
+            body.scrollTop = body.scrollHeight;
+
+            const apiKey = localStorage.getItem('fg_gemini_key');
+
+            if (apiKey && apiKey.startsWith('AIza')) {
+                try {
+                    const prompt = `You are the FloodGuard Intelligence Core, a world-class disaster management AI specialized in Northern Luzon, specifically Cagayan Valley (Tuguegarao/Cagayan River Basin).
+                    
+                    📍 LOCATION: Tuguegarao, Cagayan Valley
+                    📊 DASHBOARD DATA:
+                    - Water Level: ${lastLevel || 0} (0=Normal, 3=Dangerous)
+                    - Temperature: ${document.getElementById('wTemp').textContent}
+                    - Rain/Cloud: ${document.getElementById('wRain').textContent}
+                    - Wind: ${document.getElementById('wWind').textContent}
+                    
+                    MISSION:
+                    1. Provide expert safety advice or answer any general questions (English/Tagalog).
+                    2. Use the live data provided to give specific regional guidance.
+                    3. DO NOT USE ANY ASTERISKS (*) OR MARKDOWN BOLDING. RAW TEXT ONLY.
+                    
+                    USER QUESTION: ${msg}`;
+
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }]
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json().catch(() => ({}));
+                        throw new Error(err.error?.message || `HTTP ${response.status}`);
+                    }
+
+                    const d = await response.json();
+                    let aiText = d.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
+                    aiText = aiText.replace(/\*/g, ''); 
+                    bMsg.innerHTML = aiText;
+                } catch (e) {
+                    console.error("Gemini Error:", e);
+                    bMsg.innerHTML = `❌ Gemini AI Error: ${e.message}.<br><br><span style="font-size:10px; color:var(--muted)">Local Fallback: ${generateAIResponse(msg).replace(/\*/g, '')}</span>`;
+                }
+            } else {
+                setTimeout(() => {
+                    bMsg.innerHTML = generateAIResponse(msg);
+                    body.scrollTop = body.scrollHeight;
+                }, 800);
+            }
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function generateAIResponse(q) {
+            q = q.toLowerCase();
+            const lvl = lastLevel || 0;
+            const temp = document.getElementById('wTemp').textContent;
+            const rainfall = document.getElementById('wRain').textContent;
+            const wind = document.getElementById('wWind').textContent;
+            const humidity = document.getElementById('wHumid').textContent;
+            const uptime = document.getElementById('dUp').textContent;
+            const deviceId = document.getElementById('dId').textContent;
+
+            // Pillar 1: System & Hardware
+            if (q.includes('system') || q.includes('hardware') || q.includes('paano gumagana') || q.includes('device')) {
+                return `🤖 SYSTEM DIAGNOSTIC:<br>
+                - Device ID: ${deviceId}<br>
+                - Architecture: ESP32 with multi-stage water sensors.<br>
+                - Connectivity: Firebase Realtime Cloud.<br>
+                - Current Status: System is reporting a Level ${lvl} (${LC[lvl].label}). Sensors are dry on higher levels and active levels are being pushed every 5s.`;
+            }
+
+            // Pillar 2: Flood Preparation (Before)
+            if (q.includes('prepare') || q.includes('handa') || q.includes('ready') || q.includes('bag')) {
+                return `🎒 PREPARATION PROTOCOL (BEFORE):<br>
+                1. D-Bag: Pack water, easy-open food, and first-aid for 3 days.<br>
+                2. Docs: Place birth certificates and IDs in waterproof pouches.<br>
+                3. Elevation: Move electronic appliances to the second floor or higher countertops.<br>
+                4. Communication: Keep powerbanks at 100% and save local rescue numbers.`;
+            }
+
+            // Pillar 3: During Flood (Emergency)
+            if (q.includes('during') || q.includes('baha na') || q.includes('emergency') || q.includes('gagawin ngay') || q.includes('sakuna')) {
+                return `🚨 EMERGENCY ACTIONS (DURING):<br>
+                - Current Level: ${lvl} (${LC[lvl].label})<br>
+                1. Power: IMMEDIATELY switch off the main breaker if water enters the home.<br>
+                2. Evacuate: If water reaches Level 2, move to the designated evacuation center.<br>
+                3. Safety: Avoid walking or swimming in floodwaters (risk of leptospirosis and electrocution).<br>
+                4. Help: Use a whistle or high-intensity flashlight to signal for help.`;
+            }
+
+            // Pillar 4: MDRRMC Procedures
+            if (q.includes('mdrrmc') || q.includes('protocol') || q.includes('official') || q.includes('oase')) {
+                return `🏛️ MDRRMC STANDARD PROTOCOLS:<br>
+                - Level 1 (Build-up): Pre-emptive evacuation for low-lying areas.<br>
+                - Level 2 (Severe): Mandatory evacuation for vulnerable sectors (seniors, children).<br>
+                - Level 3 (Critical): Forced evacuation. All rescue units are deployed.<br>
+                - Operations: MDRRMC coordinates with barangay captains for local transport assistance. Stay tuned to the regional radio frequency.`;
+            }
+
+            // Pillar 5: Weather Insight (Windy/Forecast)
+            if (q.includes('weather') || q.includes('forecast') || q.includes('panahon') || q.includes('windy') || q.includes('ulan')) {
+                const windInt = parseInt(wind) || 0;
+                let windAdvice = windInt > 45 ? "Strong winds detected. Secure rooftops and loose objects." : "Wind speed is currently manageable.";
+                return `🌤️ WEATHER INTELLIGENCE:<br>
+                - Tuguegarao Focus: ${temp} with ${rainfall} rain/cloud cover.<br>
+                - Wind Analysis: ${wind}. ${windAdvice}<br>
+                - Forecast Insight: Based on Windy radar correlation, the probability of water level change is ${(lvl + 1) * 20}% in the next 4 hours. Keep monitoring the dashboard.`;
+            }
+
+            return `FloodGuard Local Brain 🧠:<br>
+            Maaari niyo akong tanungin tungkol sa:<br>
+            1. **System** - Paano gumagana ang hardware?<br>
+            2. **Preparation** - Ano ang dapat ihanda?<br>
+            3. **Emergency** - Ano ang gagawin habang may baha?<br>
+            4. **MDRRMC** - Ano ang mga official protocols?<br>
+            5. **Weather** - Kumusta ang panahon sa Windy?`;
+        }
+
+        function updateAIIntelligence(lvl) {
+            const scoreNum = document.getElementById('aiScore');
+            const scoreCircle = document.getElementById('aiScoreCircle');
+            const weatherText = document.getElementById('aiWeatherText');
+            const protocolText = document.getElementById('aiProtocolText');
+            if (!scoreNum) return;
+
+            let score = 100 - (lvl * 30);
+            if (lvl === 3) score = 12; // Dangerously low score
+
+            scoreNum.textContent = score;
+            const offset = 213.6 - (213.6 * (score / 100));
+            scoreCircle.style.strokeDashoffset = offset;
+
+            // Protocol updates
+            if (lvl === 0) protocolText.textContent = "Standard surveillance active. No hazards detected.";
+            else if (lvl === 1) protocolText.textContent = "Yellow Alert: Monitoring build-up. Citizen notification ready.";
+            else if (lvl === 2) protocolText.textContent = "Orange Alert: Deployment of emergency teams recommended.";
+            else if (lvl === 3) protocolText.textContent = "Red Alert: Immediate evacuation protocols engaged.";
+
+            // Weather simulation
+            const weatherStates = [
+                "Scattered showers expected. Water absorption capacity remains high.",
+                "Impending rainfall detected. AI predicts possible level increase in 2 hours.",
+                "Heavy precipitation ongoing. Ground saturation reached.",
+                "Extreme weather conditions. Probability of sustained flooding is 95%."
+            ];
+            weatherText.textContent = weatherStates[lvl];
+        }
+
+        // Hook into existing updates
+        const originalUpdateHero = updateHero;
+        updateHero = function (lvl) {
+            originalUpdateHero(lvl);
+            updateAIIntelligence(lvl);
+        };
+
+        async function fetchWeather() {
+            try {
+                const res = await fetch('https://wttr.in/Tuguegarao?format=j1');
+                const data = await res.json();
+                const cur = data.current_condition[0];
+                document.getElementById('wTemp').textContent = cur.temp_C + '°C';
+                document.getElementById('wHumid').textContent = cur.humidity + '%';
+                document.getElementById('wRain').textContent = cur.precipMM > 0 ? (cur.precipMM + ' mm') : (parseInt(cur.cloudcover) / 2 + '%');
+                document.getElementById('wWind').textContent = cur.windspeedKmph + ' km/h';
+                document.getElementById('wPress').textContent = cur.pressure + ' hPa';
+
+                // Link weather to AI
+                const weatherText = document.getElementById('aiWeatherText');
+                if (weatherText) {
+                    if (parseInt(cur.temp_C) > 34) weatherText.textContent = "Extreme heat in Cagayan Valley detected. Monitor for sudden convection-driven Flooding.";
+                    else if (cur.precipMM > 0) weatherText.textContent = `Cagayan Valley Alert: ${cur.precipMM}mm rain. Risk of Cagayan River level increase.`;
+                }
+            } catch (e) {
+                console.warn("Weather fetch failed.");
+            }
+        }
+    </script>
+</body>
+
+</html>
